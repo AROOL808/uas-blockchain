@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Registrasi Ijazah Web3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 font-sans">
+
+    <header class="bg-indigo-600 text-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wide">🎓 DiplomaRegistry</h1>
+            <span class="text-sm bg-indigo-500 px-3 py-1 rounded-full border border-indigo-400">ARC Testnet</span>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- Panel 1: Verifikasi (Publik) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Verifikasi Ijazah</h2>
+            <p class="text-xs text-gray-500 mb-4">Cek keaslian dokumen di blockchain secara gratis.</p>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">ID Ijazah</label>
+                    <input type="text" id="verifyId" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Misal: NIM-123">
+                    <div id="verifyIdHashDisplay" class="mt-2 text-[10px] bg-gray-100 p-2 rounded hidden break-all text-gray-600">
+                        <strong>Hash ID ke Blockchain (Keccak-256):</strong><br> <span class="font-mono font-bold" id="verifyIdHashText"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">File Dokumen (PDF)</label>
+                    <input type="file" id="verifyFile" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                    <div id="verifyHashDisplay" class="mt-2 text-[10px] bg-gray-100 p-2 rounded hidden break-all text-gray-600">
+                        <strong>Hash File ke Blockchain (SHA-256):</strong><br> <span class="font-mono font-bold" id="verifyHashText"></span>
+                    </div>
+                </div>
+                <button onclick="verifyCredential()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 text-sm rounded-lg transition-colors mt-2">Cek Keaslian</button>
+            </div>
+            <div id="verifyResult" class="mt-4 hidden p-3 rounded-lg text-xs"></div>
+        </div>
+
+        <!-- Panel 2: Terbitkan Ijazah (Issuer + Fee) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Terbitkan Ijazah</h2>
+            <p class="text-xs text-gray-500 mb-4">Menerbitkan ijazah baru dengan melampirkan bukti transfer fee.</p>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">ID Ijazah Baru</label>
+                    <input type="text" id="issueId" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="NIM-2026-001">
+                    <div id="issueIdHashDisplay" class="mt-2 text-[10px] bg-amber-50 p-2 rounded hidden break-all text-amber-800 border border-amber-200">
+                        <strong>Hash ID ke Blockchain (Keccak-256):</strong><br> <span class="font-mono font-bold" id="issueIdHashText"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">File PDF Asli</label>
+                    <input type="file" id="issueFile" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-amber-50 file:text-amber-700">
+                    <div id="issueHashDisplay" class="mt-2 text-[10px] bg-amber-50 p-2 rounded hidden break-all text-amber-800 border border-amber-200">
+                        <strong>Hash File ke Blockchain (SHA-256):</strong><br> <span class="font-mono font-bold" id="issueHashText"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Hash Transaksi Transfer Fee (0.01 Token)</label>
+                    <input type="text" id="feeTxHash" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" placeholder="0xTxHashPembayaranFee...">
+                </div>
+                <button onclick="issueCredential()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 text-sm rounded-lg transition-colors mt-2">Terbitkan (Pakai Fee)</button>
+            </div>
+            <div id="issueResult" class="mt-4 hidden p-3 rounded-lg text-xs bg-gray-50 border break-all"></div>
+        </div>
+
+        <!-- Panel 3: Kelola Issuer (Khusus Admin) -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Kelola Issuer</h2>
+            <p class="text-xs text-gray-500 mb-4">Tambahkan alamat wallet penerbit ijazah resmi baru.</p>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Alamat Wallet Issuer (0x...)</label>
+                    <input type="text" id="newIssuerAddress" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0x1234...5678">
+                </div>
+                <button onclick="addIssuer()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 text-sm rounded-lg transition-colors">Tambah Issuer Baru</button>
+            </div>
+            <div id="addIssuerResult" class="mt-4 hidden p-3 rounded-lg text-xs bg-gray-50 border break-all"></div>
+        </div>
+
+    </main>
+
+    <script>
+        async function calculateHash(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // --- Event Listener untuk ID (Keccak-256 via Ethers.js) ---
+        function attachIdHasher(inputId, displayId, textId) {
+            document.getElementById(inputId).addEventListener('input', function(e) {
+                const text = e.target.value;
+                const displayBox = document.getElementById(displayId);
+                if (text) {
+                    displayBox.classList.remove('hidden');
+                    document.getElementById(textId).innerText = ethers.id(text); // Hashing ID
+                } else {
+                    displayBox.classList.add('hidden');
+                }
+            });
+        }
+        
+        attachIdHasher('verifyId', 'verifyIdHashDisplay', 'verifyIdHashText');
+        attachIdHasher('issueId', 'issueIdHashDisplay', 'issueIdHashText');
+
+        // --- Event Listener untuk File PDF (SHA-256) ---
+        function attachFileHasher(inputId, displayId, textId) {
+            document.getElementById(inputId).addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                const displayBox = document.getElementById(displayId);
+                if (file) {
+                    document.getElementById(textId).innerText = "Menghitung...";
+                    displayBox.classList.remove('hidden');
+                    const hash = await calculateHash(file);
+                    document.getElementById(textId).innerText = hash;
+                } else {
+                    displayBox.classList.add('hidden');
+                }
+            });
+        }
+
+        attachFileHasher('verifyFile', 'verifyHashDisplay', 'verifyHashText');
+        attachFileHasher('issueFile', 'issueHashDisplay', 'issueHashText');
+        // -------------------------------------------------------
+
+        async function verifyCredential() {
+            const idInput = document.getElementById('verifyId').value;
+            const fileInput = document.getElementById('verifyFile').files[0];
+            const resultBox = document.getElementById('verifyResult');
+
+            if (!idInput || !fileInput) return alert("Harap isi ID dan file.");
+            
+            resultBox.classList.remove('hidden');
+            resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-blue-50 text-blue-700 border border-blue-200';
+            resultBox.innerHTML = 'Memeriksa keaslian...';
+
+            try {
+                const docHash = await calculateHash(fileInput);
+                const bytes32Id = ethers.id(idInput);
+
+                const response = await fetch(`/api/verify?id=${bytes32Id}&docHash=${docHash}`);
+                const data = await response.json();
+
+                if (data.success && data.data.valid) {
+                    resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-green-50 text-green-800 border border-green-200';
+                    resultBox.innerHTML = `<strong>✅ Valid!</strong><br>Issuer: ${data.data.issuer}`;
+                } else {
+                    resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-red-50 text-red-800 border border-red-200';
+                    resultBox.innerHTML = `<strong>❌ Tidak Valid / Tidak Ditemukan</strong>`;
+                }
+            } catch (error) {
+                resultBox.innerHTML = `Error: ${error.message}`;
+            }
+        }
+
+        async function issueCredential() {
+            const idInput = document.getElementById('issueId').value;
+            const fileInput = document.getElementById('issueFile').files[0];
+            const feeTxHash = document.getElementById('feeTxHash').value;
+            const resultBox = document.getElementById('issueResult');
+
+            if (!idInput || !fileInput || !feeTxHash) return alert("Harap lengkapi seluruh field termasuk Hash Fee!");
+
+            resultBox.classList.remove('hidden');
+            resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-amber-50 text-amber-800 border border-amber-200';
+            resultBox.innerHTML = 'Memproses penerbitan dan memverifikasi fee...';
+
+            try {
+                const docHash = await calculateHash(fileInput);
+                const bytes32Id = ethers.id(idInput);
+
+                const response = await fetch('/api/issue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: bytes32Id, docHash: docHash, feeTxHash: feeTxHash })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-green-50 text-green-800 border border-green-200 break-all';
+                    resultBox.innerHTML = `<strong>🎉 Berhasil Diterbitkan!</strong><br>Tx Hash: ${data.txHash}`;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-red-50 text-red-800 border border-red-200';
+                resultBox.innerHTML = `<strong>Gagal:</strong> ${error.message}`;
+            }
+        }
+
+        async function addIssuer() {
+            const issuerAddress = document.getElementById('newIssuerAddress').value;
+            const resultBox = document.getElementById('addIssuerResult');
+
+            if (!issuerAddress) return alert("Harap masukkan alamat wallet!");
+
+            resultBox.classList.remove('hidden');
+            resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-blue-50 text-blue-700 border border-blue-200';
+            resultBox.innerHTML = 'Menambahkan Issuer ke smart contract...';
+
+            try {
+                const response = await fetch('/api/add-issuer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ issuerAddress: issuerAddress })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-green-50 text-green-800 border border-green-200 break-all';
+                    resultBox.innerHTML = `<strong>✅ Issuer Berhasil Ditambahkan!</strong><br>Tx Hash: ${data.txHash}`;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                resultBox.className = 'mt-4 p-3 rounded-lg text-xs bg-red-50 text-red-800 border border-red-200';
+                resultBox.innerHTML = `<strong>Gagal:</strong> ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
