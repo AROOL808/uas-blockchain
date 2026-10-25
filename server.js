@@ -1,5 +1,3 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
 require('dotenv').config();
 const express = require('express');
 const { ethers } = require('ethers');
@@ -17,7 +15,7 @@ const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, wallet);
 // --- SISTEM PENCEGAHAN DOUBLE-SPEND FEE ---
 // Catatan: Dalam produksi nyata, simpan data ini di Database (MySQL/MongoDB/PostgreSQL) 
 // agar riwayat tidak hilang ketika server direstart.
-const usedFeeHashes = new Set(); 
+const usedFeeHashes = new Set();
 
 // Fitur Admin: Menambahkan Issuer Baru
 app.post('/api/add-issuer', async (req, res) => {
@@ -97,7 +95,7 @@ app.get('/api/verify', async (req, res) => {
     try {
         const { id, docHash } = req.query;
         const result = await contract.verify(id, docHash);
-        
+
         res.json({
             success: true,
             data: {
